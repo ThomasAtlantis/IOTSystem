@@ -1,0 +1,7 @@
+osal_memcpy()
+osal_set_event()
+osal_start_timerEx()
+osal_msg_deallocate()
+osal_msg_receive()
+osal_rand()
+osal_msg_allocate()

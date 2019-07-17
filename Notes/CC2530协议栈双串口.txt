@@ -1,0 +1,50 @@
+1 基本操作
+project options
+	C/C++ Compiler
+		Preprocessor
+			Defined Symbols
+			添加：
+				HAL_UART_DMA=1
+				HAL_UART_ISR=2
+MT_UART.c
+	MT_UartInit()
+	添加：
+		HalUARTOpen (HAL_UART_PORT_1, &uartConfig);
+
+硬件接线：
+	UART_0: P0_2: RX; P0_3: TX // 位置1
+	UART_1: P1_6: TX; P1_7: RX // 位置2
+	默认P0端口是UART_0优先的，可通过P2DIR和P2SEL寄存器设置优先级：
+		设置P0端口UART_0优先：P2DIR&=~(3<<6);
+		设置P1端口UART_0优先：P2SEL&=~(1<<6);
+		设置P1端口UART_1优先：P2SEL|= (1<<6);
+	(参考：
+		CC2530中文数据手册完全版 P72-73;
+		https://blog.csdn.net/forLeep_H/article/details/53676513;
+	)
+
+此时UART_0使用DMA方式，UART_1使用ISR方式，理应好用，然而串口1发送乱码
+2 解决乱码
+2.1 猜想UART_1的初始化和使用在中断初始化之前
+
+查看ZMain.c发现顺序如下：
+
+	// Initialize the operating system
+	osal_init_system();
+
+	// Allow interrupts
+	osal_int_enable( INTS_ALL );
+
+	而APP的初始化是在osal_init_system()中调用的，所以可能存在这个问题，将初始化放在APP处理事件的函数中，发现仍然存在乱码现象
+
+2.2 单步调试找到乱码位置
+
+发现是LCD的引脚与UART_1发生了冲突，由于我们这个项目不需要LCD，所以可以使用预编译指令屏蔽它。但要注意预编译变量的写法：
+	正确：
+		HAL_LCD=FALSE
+		去掉LCD_SUPPORTED
+	错误：
+		LCD_SUPPORTED=FALSE
+		这是因为HAL_LCD默认是定义并且为TRUE的，不添加并不能使其不定义，而LCD_SUPPORTED在代码中使用#if defined(LCD_SUPPORTED)来控制，而不是#if LCD_SUPPORTED，所以要去掉
+
+关于事件注册的原理和编程范式将在另一篇文章中讲
