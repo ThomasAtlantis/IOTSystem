@@ -23,9 +23,9 @@
 
 if ($debugfile -eq "")
 {
-& "F:\IAR\common\bin\cspybat" -f "F:\IAR\8051_work\Gateway\Projects\zstack\Samples\SampleApp\CC2530DB\settings\SampleApp.CoordinatorEB.general.xcl" --backend -f "F:\IAR\8051_work\Gateway\Projects\zstack\Samples\SampleApp\CC2530DB\settings\SampleApp.CoordinatorEB.driver.xcl" 
+& "F:\IAR\common\bin\cspybat" -f "F:\IAR\8051_work\IOTSystem\Gateway\Projects\zstack\Samples\SampleApp\CC2530DB\settings\SampleApp.CoordinatorEB.general.xcl" --backend -f "F:\IAR\8051_work\IOTSystem\Gateway\Projects\zstack\Samples\SampleApp\CC2530DB\settings\SampleApp.CoordinatorEB.driver.xcl" 
 }
 else
 {
-& "F:\IAR\common\bin\cspybat" -f "F:\IAR\8051_work\Gateway\Projects\zstack\Samples\SampleApp\CC2530DB\settings\SampleApp.CoordinatorEB.general.xcl" --debug_file=$debugfile --backend -f "F:\IAR\8051_work\Gateway\Projects\zstack\Samples\SampleApp\CC2530DB\settings\SampleApp.CoordinatorEB.driver.xcl" 
+& "F:\IAR\common\bin\cspybat" -f "F:\IAR\8051_work\IOTSystem\Gateway\Projects\zstack\Samples\SampleApp\CC2530DB\settings\SampleApp.CoordinatorEB.general.xcl" --debug_file=$debugfile --backend -f "F:\IAR\8051_work\IOTSystem\Gateway\Projects\zstack\Samples\SampleApp\CC2530DB\settings\SampleApp.CoordinatorEB.driver.xcl" 
 }
