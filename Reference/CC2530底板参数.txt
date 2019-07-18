@@ -1,0 +1,10 @@
+按键参数
+S1			P0_0
+S2			P0_1
+
+
+LED 参数
+
+red			P1_0	LED1
+yellow 		P1_1	LED2
+orange 		P1_4	LED3

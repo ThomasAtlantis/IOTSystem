@@ -76,6 +76,7 @@ extern "C"
 #define SAMPLEAPP_INITIALIZE_UART_EVT         0x0002
 #define SAMPLEAPP_INITIALIZE_WIFI_EVT         0x0004
 #define SAMPLEAPP_SEND_HEART_BEAT_EVT         0x0008
+#define SAMPLEAPP_CONFIGURE_WIFI_EVT          0x0010
 
 // Group ID for Flash Command
 #define SAMPLEAPP_FLASH_GROUP                 0x0001

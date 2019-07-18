@@ -107,9 +107,9 @@
 #define HAL_KEY_CPU_PORT_0_IF P0IF
 #define HAL_KEY_CPU_PORT_2_IF P2IF
 
-/* SW_6 is at P0.4 */
+/* SW_6 is at P0.1 */
 #define HAL_KEY_SW_6_PORT   P0
-#define HAL_KEY_SW_6_BIT    BV(4)
+#define HAL_KEY_SW_6_BIT    BV(0)
 #define HAL_KEY_SW_6_SEL    P0SEL
 #define HAL_KEY_SW_6_DIR    P0DIR
 
@@ -122,7 +122,7 @@
 #define HAL_KEY_SW_6_IEN      IEN1  /* CPU interrupt mask register */
 #define HAL_KEY_SW_6_IENBIT   BV(5) /* Mask bit for all of Port_0 */
 #define HAL_KEY_SW_6_ICTL     P0IEN /* Port Interrupt Control register */
-#define HAL_KEY_SW_6_ICTLBIT  BV(4) /* P0IEN - P0.4 enable/disable bit */
+#define HAL_KEY_SW_6_ICTLBIT  BV(0) /* P0IEN - P0.1 enable/disable bit */
 #define HAL_KEY_SW_6_PXIFG    P0IFG /* Interrupt flag at source */
 
 /* Joy stick move at P2.0 */

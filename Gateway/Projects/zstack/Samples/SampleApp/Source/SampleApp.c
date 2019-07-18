@@ -15,6 +15,7 @@
 *********************************************************************/
 
 #include "OSAL.h"
+#include "OSAL_Nv.h"
 #include "ZGlobals.h"
 #include "AF.h"
 #include "aps_groups.h"
@@ -39,7 +40,16 @@
 
 #define UartDefaultRxLen 50
 #define UartDefaultTxLen 64
+#define Key_S1 P0_0
+#define Key_S2 P0_1
+#define Key_Active 0
+#define LED_RED P1_0
+#define LED_YELLOW P1_1
+#define LED_ORANGE P1_4
+#define ZD_NV_SSID_ID 0x0401
+#define ZD_NV_PSWD_ID 0x0402
 
+#define isPressed(x) (x == Key_Active)
 #define print(x,...) _UARTSend(1,x,##__VA_ARGS__)
 #define debug(x,...) _UARTSend(0,x,##__VA_ARGS__)
 #define debug_and_print(x,...) do{\
@@ -53,6 +63,7 @@ void _delay_us(uint16 n);
 void _delay_ms(uint16 n);
 uint8 wait_for(uint8 *str, uint8 *err, uint16 timeout);
 void exit_send(void);
+uint16 WiFiRecv(uint8 *buff);
 
 // This list should be filled with Application specific Cluster IDs.
 const cId_t SampleApp_ClusterList[SAMPLEAPP_MAX_CLUSTERS] =
@@ -219,6 +230,10 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
 {
     afIncomingMSGPacket_t *MSGpkt;
     halUARTCfg_t uartConfig;
+    uint8 _buffer[UartDefaultRxLen];
+    uint8 InitNVStatus, readNVStatus, writeNVStatus;
+    uint8 SSID[8], PSWD[8];
+    uint16 length, nv_id;
     (void)task_id;    // Intentionally unreferenced parameter
     if ( events & SYS_EVENT_MSG )
     {
@@ -299,25 +314,83 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
         uartConfig.callBackFunc         = NULL;
         HalUARTOpen(HAL_UART_PORT_1, &uartConfig);
         debug("UART_1 INITIALIZED!\r\n");
-        osal_set_event(SampleApp_TaskID, SAMPLEAPP_INITIALIZE_WIFI_EVT);
+
+        if (isPressed(Key_S1)) {
+            debug("Enter AP Mode\r\n");
+            osal_set_event(SampleApp_TaskID, SAMPLEAPP_CONFIGURE_WIFI_EVT);
+        } else {
+            debug("Enter STA Mode\r\n");
+            osal_set_event(SampleApp_TaskID, SAMPLEAPP_INITIALIZE_WIFI_EVT);
+        }
         return (events ^ SAMPLEAPP_INITIALIZE_UART_EVT);
+    }
+
+    if (events & SAMPLEAPP_CONFIGURE_WIFI_EVT) {
+        exit_send();
+        do debug_and_print("AT+CWMODE=2\r\n");
+        while (wait_for("OK\r\n", "ERROR\r\n", 0));
+        do debug_and_print("AT+CWSAP=\"ESP8266\",\"123456\",11,0\r\n");
+        while (wait_for("OK\r\n", "ERROR\r\n", 0));
+        do debug_and_print("AT+CIPMODE=0\r\n");
+        while (wait_for("OK\r\n", "ERROR\r\n", 0));
+        do debug_and_print("AT+CIPMUX=1\r\n");
+        while (wait_for("OK\r\n", "ERROR\r\n", 0)); 
+        do debug_and_print("AT+CIPSERVER=1,8266\r\n");
+        while (wait_for("OK\r\n", "ERROR\r\n", 0));
+        while (1) {
+            length = WiFiRecv(_buffer);
+            if (length > 6 && length <= 25) { // min: SSIDx\r\n 允许19位长度
+                if (osal_memcmp(_buffer, (uint8 *) "SSID", 4)) {
+                    nv_id = ZD_NV_SSID_ID;
+                } else 
+                if (osal_memcmp(_buffer, (uint8 *) "PSWD", 4)) {
+                    nv_id = ZD_NV_PSWD_ID;
+                } else continue;
+                while (length < 26) _buffer[length ++] = '\0';
+                InitNVStatus = osal_nv_item_init(nv_id, 20, NULL);
+                writeNVStatus = osal_nv_write(nv_id, 0, 20, _buffer + 4);
+                (void) writeNVStatus;
+            } else if (length == 4 && osal_memcmp(_buffer, (uint8 *)"OK\r\n", 4)) {
+                do debug_and_print("AT+RST\r\n");
+                while (wait_for("ready\r\n", "ERROR\r\n", 0));
+                break;
+            }
+        }
+        osal_set_event(SampleApp_TaskID, SAMPLEAPP_INITIALIZE_WIFI_EVT);
+        return (events ^ SAMPLEAPP_CONFIGURE_WIFI_EVT);
     }
 
     if (events & SAMPLEAPP_INITIALIZE_WIFI_EVT) {
         // initialize esp8266
         do {
             exit_send();
+            InitNVStatus = osal_nv_item_init(ZD_NV_SSID_ID, 20, NULL);
+            readNVStatus = osal_nv_read(ZD_NV_SSID_ID, 0, 20, SSID);
+            if (readNVStatus == SUCCESS && InitNVStatus == SUCCESS) {
+                HalUARTWrite(0, SSID, 20);
+            } else {
+                debug("Read Flash Failed\r\n");
+                return (events ^ SAMPLEAPP_INITIALIZE_WIFI_EVT);
+            }
+            InitNVStatus = osal_nv_item_init(ZD_NV_PSWD_ID, 20, NULL);
+            readNVStatus = osal_nv_read(ZD_NV_PSWD_ID, 0, 20, PSWD);
+            if (readNVStatus == SUCCESS && InitNVStatus == SUCCESS) {
+                HalUARTWrite(0, PSWD, 20);
+            } else {
+                debug("Read Flash Failed\r\n");
+                return (events ^ SAMPLEAPP_INITIALIZE_WIFI_EVT);
+            }
             do debug_and_print("AT+CWMODE=1\r\n");
             while (wait_for("OK\r\n", "ERROR\r\n", 0));
-            // do debug_and_print("AT+CWJAP=\"liuchen\",\"liuchen88\"\r\n");
-            do debug_and_print("AT+CWJAP=\"Atlantis\",\"21396878335\"\r\n");
+            do debug_and_print("AT+CWJAP=\"liuchen\",\"liuchen88\"\r\n");
+            // do debug_and_print("AT+CWJAP=\"Atlantis\",\"21396878335\"\r\n");
             while (wait_for("OK\r\n", "FAIL\r\n", 0));
             do debug_and_print("AT+CIPMUX=0\r\n");
             while (wait_for("OK\r\n", "ERROR\r\n", 0));
             do debug_and_print("AT+CIPMODE=1\r\n");
             while (wait_for("OK\r\n", "ERROR\r\n", 0));
-            do debug_and_print("AT+CIPSTART=\"TCP\",\"192.168.43.2\",8000\r\n");
-            // do debug_and_print("AT+CIPSTART=\"TCP\",\"192.168.1.104\",8000\r\n");
+            // do debug_and_print("AT+CIPSTART=\"TCP\",\"192.168.43.2\",8000\r\n");
+            do debug_and_print("AT+CIPSTART=\"TCP\",\"192.168.1.109\",8000\r\n");
             while (wait_for("OK\r\n", "CLOSED\r\n", 0));
             debug_and_print("AT+CIPSEND\r\n");
         } while (wait_for(">", "ERROR\r\n", 0));
@@ -363,11 +436,9 @@ void SampleApp_HandleKeys( uint8 shift, uint8 keys )
     (void)shift;    // Intentionally unreferenced parameter
     
     if ( keys & HAL_KEY_SW_6 ) { // S1
-        
     }
 
     if ( keys & HAL_KEY_SW_7 ) { // S2
-        
     }
 }
 
@@ -534,4 +605,35 @@ void exit_send() {
     _delay_ms(10);
     print("\r\n");
     _delay_ms(10);
+}
+
+
+// TODO: 整体要改
+uint16 WiFiRecv(uint8 *buff) {
+    uint16 read_len, l_index, r_index;
+    uint8 buffer[UartDefaultRxLen];
+    while (1) {
+        _UARTRead(HAL_UART_PORT_1, buffer, &read_len);
+        _delay_ms(1);
+        if (read_len > 34) { // at least "0,CONNECT\r\n\r\n+IPD,0,2:\r\n0,CLOSED\r\n"
+            l_index = 0;
+            while (l_index < read_len && buffer[l_index] != ':') {
+                l_index ++;
+            }
+            if (l_index == read_len) continue;
+            r_index = ++ l_index;
+            while (r_index < read_len && buffer[r_index] != '\n') {
+                r_index ++;
+            }
+            if (r_index == read_len) continue;
+            buffer[++ r_index] = '\0';
+            // TODO: 这里有个bug，当连接数较多时，可能出现
+            if (strcmp((char *)(buffer + r_index + 1), ",CLOSED\r\n") == 0) {
+                debug(buffer + l_index);
+                strcpy((char *)buff, (char *)(buffer + l_index));
+                debug("%d\r\n", r_index + 1 - l_index);
+                return (r_index - l_index);
+            }
+        }
+    }
 }

@@ -138,16 +138,9 @@
 #define ACTIVE_HIGH       !!    /* double negation forces result to be '1' */
 
 /* S1 */
-#define PUSH1_BV          BV(1)
-#define PUSH1_SBIT        P0_1
-
-#if defined (HAL_BOARD_CC2530EB_REV17)
-  #define PUSH1_POLARITY    ACTIVE_HIGH
-#elif defined (HAL_BOARD_CC2530EB_REV13)
-  #define PUSH1_POLARITY    ACTIVE_LOW
-#else
-  #error Unknown Board Indentifier
-#endif
+#define PUSH1_BV          BV(0)
+#define PUSH1_SBIT        P0_0
+#define PUSH1_POLARITY    ACTIVE_LOW
 
 /* Joystick Center Press */
 #define PUSH2_BV          BV(0)

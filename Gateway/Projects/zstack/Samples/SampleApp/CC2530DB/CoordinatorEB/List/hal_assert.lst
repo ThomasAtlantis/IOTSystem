@@ -1,6 +1,6 @@
 ###############################################################################
 #
-# IAR C/C++ Compiler V10.20.1.5333 for 8051               17/Jul/2019  16:27:41
+# IAR C/C++ Compiler V10.20.1.5333 for 8051               17/Jul/2019  19:56:56
 # Copyright 2004-2018 IAR Systems AB.
 # PC-locked license - IAR Embedded Workbench for 8051
 #
@@ -14,7 +14,7 @@
 #    Source file        =  
 #        F:\IAR\8051_work\IOTSystem\Gateway\Components\hal\common\hal_assert.c
 #    Command line       =  
-#        -f C:\Users\MAC\AppData\Local\Temp\EW7DE9.tmp
+#        -f C:\Users\MAC\AppData\Local\Temp\EW16EB.tmp
 #        (F:\IAR\8051_work\IOTSystem\Gateway\Components\hal\common\hal_assert.c
 #        -D HAL_LCD=FALSE -D ZTOOL_P1 -D xMT_TASK -D xMT_SYS_FUNC -D
 #        xMT_ZDO_FUNC -D HAL_UART_DMA=1 -D HAL_UART_ISR=2 -lC
@@ -573,8 +573,8 @@ F:\IAR\8051_work\IOTSystem\Gateway\Components\hal\common\hal_assert.c
    \   0000CC   7F04         MOV       R7,#0x4
    \   0000CE   02....       LJMP      ?BANKED_LEAVE_XDATA
    \                     ??halAssertHazardLights_17:
-   \   0000D1   A281         MOV       C,0x80.1
-   \   0000D3   5095         JNC       ??halAssertHazardLights_7
+   \   0000D1   A280         MOV       C,0x80.0
+   \   0000D3   4095         JC        ??halAssertHazardLights_7
    \   0000D5   09           INC       R1
    \   0000D6   740A         MOV       A,#0xa
    \   0000D8   69           XRL       A,R1
@@ -586,8 +586,8 @@ F:\IAR\8051_work\IOTSystem\Gateway\Components\hal\common\hal_assert.c
    \   0000E3   7800         MOV       R0,#0x0
    \   0000E5   7900         MOV       R1,#0x0
    \                     ??halAssertHazardLights_18:
-   \   0000E7   A281         MOV       C,0x80.1
-   \   0000E9   5004         JNC       ??halAssertHazardLights_19
+   \   0000E7   A280         MOV       C,0x80.0
+   \   0000E9   4004         JC        ??halAssertHazardLights_19
    \   0000EB   7800         MOV       R0,#0x0
    \   0000ED   7900         MOV       R1,#0x0
    \                     ??halAssertHazardLights_19:
@@ -635,8 +635,8 @@ F:\IAR\8051_work\IOTSystem\Gateway\Components\hal\common\hal_assert.c
    \   000139   7900         MOV       R1,#0x0
    \   00013B   7C00         MOV       R4,#0x0
    \                     ??halAssertHazardLights_6:
-   \   00013D   A281         MOV       C,0x80.1
-   \   00013F   50FC         JNC       ??halAssertHazardLights_6
+   \   00013D   A280         MOV       C,0x80.0
+   \   00013F   40FC         JC        ??halAssertHazardLights_6
    \   000141   D290         SETB      0x90.0
    \   000143   D291         SETB      0x90.1
    \   000145   D294         SETB      0x90.4
@@ -650,8 +650,8 @@ F:\IAR\8051_work\IOTSystem\Gateway\Components\hal\common\hal_assert.c
    \   000150   7A00         MOV       R2,#0x0
    \   000152   7B00         MOV       R3,#0x0
    \                     ??halAssertHazardLights_23:
-   \   000154   A281         MOV       C,0x80.1
-   \   000156   5004         JNC       ??halAssertHazardLights_24
+   \   000154   A280         MOV       C,0x80.0
+   \   000156   4004         JC        ??halAssertHazardLights_24
    \   000158   7A00         MOV       R2,#0x0
    \   00015A   7B00         MOV       R3,#0x0
    \                     ??halAssertHazardLights_24:
