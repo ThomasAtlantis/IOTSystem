@@ -168,9 +168,10 @@ def run_server():
 		sys.exit()
 
 if __name__ == '__main__':
+	time.sleep(5)
 	if not connect(WIFI_SSID_ESP, WIFI_PSWD_ESP, AUTH_TYPE_ESP):
 		sys.exit(1)
-	time.sleep(2)
+	time.sleep(5)
 	configure_WiFi()
 	time.sleep(2)
 	if not connect(WIFI_SSID_AP, WIFI_PSWD_AP, AUTH_TYPE_AP):

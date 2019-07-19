@@ -230,10 +230,10 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
 {
     afIncomingMSGPacket_t *MSGpkt;
     halUARTCfg_t uartConfig;
-    uint8 _buffer[UartDefaultRxLen], *_buffer_pointer;
+    uint8 _buffer[UartDefaultRxLen];
     uint8 InitNVStatus, readNVStatus, writeNVStatus;
     uint8 SSID[20], PSWD[20];
-    uint16 length, nv_id, SSID_len, PSWD_len;
+    uint16 length, nv_id;
     (void)task_id;    // Intentionally unreferenced parameter
     if ( events & SYS_EVENT_MSG )
     {
@@ -365,37 +365,22 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
         // initialize esp8266
         do {
             exit_send();
-            _buffer_pointer = _buffer;
-            osal_memcpy(_buffer_pointer, "AT+CWJAP=\"", 10);
-            _buffer_pointer += 10;
             InitNVStatus = osal_nv_item_init(ZD_NV_SSID_ID, 20, NULL);
             readNVStatus = osal_nv_read(ZD_NV_SSID_ID, 0, 20, SSID);
             if (readNVStatus != SUCCESS || InitNVStatus != SUCCESS) {
                 debug("Read Flash Failed\r\n");
                 return (events ^ SAMPLEAPP_INITIALIZE_WIFI_EVT);
             }
-            for (SSID_len = 0; SSID_len < 19; ++ SSID_len)
-                if (SSID[SSID_len] == '\0') break;
-            osal_memcpy(_buffer_pointer, SSID, SSID_len);
-            _buffer_pointer += SSID_len;
-            osal_memcpy(_buffer_pointer, "\",\"", 3);
-            _buffer_pointer += 3;
             InitNVStatus = osal_nv_item_init(ZD_NV_PSWD_ID, 20, NULL);
             readNVStatus = osal_nv_read(ZD_NV_PSWD_ID, 0, 20, PSWD);
             if (readNVStatus != SUCCESS || InitNVStatus != SUCCESS) {
                 debug("Read Flash Failed\r\n");
                 return (events ^ SAMPLEAPP_INITIALIZE_WIFI_EVT);
             }
-            for (PSWD_len = 0; PSWD_len < 19; ++ PSWD_len)
-                if (PSWD[PSWD_len] == '\0') break;
-            osal_memcpy(_buffer_pointer, PSWD, PSWD_len);
-            _buffer_pointer += PSWD_len;
-            osal_memcpy(_buffer_pointer, "\"\r\n\0", 4);
-            debug(_buffer);
 
             do debug_and_print("AT+CWMODE=1\r\n");
             while (wait_for("OK\r\n", "ERROR\r\n", 0));
-            do debug_and_print("AT+CWJAP=\"liuchen\",\"liuchen88\"\r\n");
+            do debug_and_print("AT+CWJAP=\"%s\",\"%s\"\r\n", SSID, PSWD);
             while (wait_for("OK\r\n", "FAIL\r\n", 0));
             do debug_and_print("AT+CIPMUX=0\r\n");
             while (wait_for("OK\r\n", "ERROR\r\n", 0));
