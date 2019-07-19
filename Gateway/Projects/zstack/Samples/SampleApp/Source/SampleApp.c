@@ -46,8 +46,8 @@
 #define LED_RED P1_0
 #define LED_YELLOW P1_1
 #define LED_ORANGE P1_4
-#define ZD_NV_SSID_ID 0x0401
-#define ZD_NV_PSWD_ID 0x0402
+#define ZD_NV_SSID_ID 0x0420
+#define ZD_NV_PSWD_ID 0x0410
 
 #define isPressed(x) (x == Key_Active)
 #define print(x,...) _UARTSend(1,x,##__VA_ARGS__)
@@ -230,10 +230,10 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
 {
     afIncomingMSGPacket_t *MSGpkt;
     halUARTCfg_t uartConfig;
-    uint8 _buffer[UartDefaultRxLen];
+    uint8 _buffer[UartDefaultRxLen], *_buffer_pointer;
     uint8 InitNVStatus, readNVStatus, writeNVStatus;
-    uint8 SSID[8], PSWD[8];
-    uint16 length, nv_id;
+    uint8 SSID[20], PSWD[20];
+    uint16 length, nv_id, SSID_len, PSWD_len;
     (void)task_id;    // Intentionally unreferenced parameter
     if ( events & SYS_EVENT_MSG )
     {
@@ -346,6 +346,7 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
                 if (osal_memcmp(_buffer, (uint8 *) "PSWD", 4)) {
                     nv_id = ZD_NV_PSWD_ID;
                 } else continue;
+                length -= 2;
                 while (length < 26) _buffer[length ++] = '\0';
                 InitNVStatus = osal_nv_item_init(nv_id, 20, NULL);
                 writeNVStatus = osal_nv_write(nv_id, 0, 20, _buffer + 4);
@@ -364,33 +365,43 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
         // initialize esp8266
         do {
             exit_send();
+            _buffer_pointer = _buffer;
+            osal_memcpy(_buffer_pointer, "AT+CWJAP=\"", 10);
+            _buffer_pointer += 10;
             InitNVStatus = osal_nv_item_init(ZD_NV_SSID_ID, 20, NULL);
             readNVStatus = osal_nv_read(ZD_NV_SSID_ID, 0, 20, SSID);
-            if (readNVStatus == SUCCESS && InitNVStatus == SUCCESS) {
-                HalUARTWrite(0, SSID, 20);
-            } else {
+            if (readNVStatus != SUCCESS || InitNVStatus != SUCCESS) {
                 debug("Read Flash Failed\r\n");
                 return (events ^ SAMPLEAPP_INITIALIZE_WIFI_EVT);
             }
+            for (SSID_len = 0; SSID_len < 19; ++ SSID_len)
+                if (SSID[SSID_len] == '\0') break;
+            osal_memcpy(_buffer_pointer, SSID, SSID_len);
+            _buffer_pointer += SSID_len;
+            osal_memcpy(_buffer_pointer, "\",\"", 3);
+            _buffer_pointer += 3;
             InitNVStatus = osal_nv_item_init(ZD_NV_PSWD_ID, 20, NULL);
             readNVStatus = osal_nv_read(ZD_NV_PSWD_ID, 0, 20, PSWD);
-            if (readNVStatus == SUCCESS && InitNVStatus == SUCCESS) {
-                HalUARTWrite(0, PSWD, 20);
-            } else {
+            if (readNVStatus != SUCCESS || InitNVStatus != SUCCESS) {
                 debug("Read Flash Failed\r\n");
                 return (events ^ SAMPLEAPP_INITIALIZE_WIFI_EVT);
             }
+            for (PSWD_len = 0; PSWD_len < 19; ++ PSWD_len)
+                if (PSWD[PSWD_len] == '\0') break;
+            osal_memcpy(_buffer_pointer, PSWD, PSWD_len);
+            _buffer_pointer += PSWD_len;
+            osal_memcpy(_buffer_pointer, "\"\r\n\0", 4);
+            debug(_buffer);
+
             do debug_and_print("AT+CWMODE=1\r\n");
             while (wait_for("OK\r\n", "ERROR\r\n", 0));
             do debug_and_print("AT+CWJAP=\"liuchen\",\"liuchen88\"\r\n");
-            // do debug_and_print("AT+CWJAP=\"Atlantis\",\"21396878335\"\r\n");
             while (wait_for("OK\r\n", "FAIL\r\n", 0));
             do debug_and_print("AT+CIPMUX=0\r\n");
             while (wait_for("OK\r\n", "ERROR\r\n", 0));
             do debug_and_print("AT+CIPMODE=1\r\n");
             while (wait_for("OK\r\n", "ERROR\r\n", 0));
-            // do debug_and_print("AT+CIPSTART=\"TCP\",\"192.168.43.2\",8000\r\n");
-            do debug_and_print("AT+CIPSTART=\"TCP\",\"192.168.1.109\",8000\r\n");
+            do debug_and_print("AT+CIPSTART=\"TCP\",\"192.168.1.104\",8000\r\n");
             while (wait_for("OK\r\n", "CLOSED\r\n", 0));
             debug_and_print("AT+CIPSEND\r\n");
         } while (wait_for(">", "ERROR\r\n", 0));
@@ -499,7 +510,7 @@ void SampleApp_SendPeriodicMessage( void ) {
  *
  * @return    none
  */
-void SampleApp_SendFlashMessage( uint16 flashTime ) {
+void SampleApp_SendFlashMessage(uint16 flashTime) {
     uint8 buffer[3];
     buffer[0] = (uint8)(SampleAppFlashCounter++);
     buffer[1] = LO_UINT16( flashTime );
@@ -608,7 +619,7 @@ void exit_send() {
 }
 
 
-// TODO: 整体要改
+// 当前逻辑下每次连接只能发送一条消息，之后就要断开连接
 uint16 WiFiRecv(uint8 *buff) {
     uint16 read_len, l_index, r_index;
     uint8 buffer[UartDefaultRxLen];

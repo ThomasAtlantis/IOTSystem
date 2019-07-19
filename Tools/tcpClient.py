@@ -10,9 +10,18 @@ PSWD = "liuchen88"
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect(("192.168.4.1", 8266))
-# s.send("SSIDliuchen\r\n".encode('utf-8'))
-# s.send("PSWDliuchen88\r\n".encode('utf-8'))
+s.send("SSIDliuchen\r\n".encode('utf-8'))
+s.close()
+time.sleep(0.8)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("192.168.4.1", 8266))
+s.send("PSWDliuchen88\r\n".encode('utf-8'))
+s.close()
+time.sleep(0.8)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("192.168.4.1", 8266))
 s.send("OK\r\n".encode('utf-8'))
+s.close()
 # while (True):
 # 	s.send("RTS\r\n".encode('utf-8'))
 # 	buff = s.recv(128)
@@ -43,5 +52,3 @@ s.send("OK\r\n".encode('utf-8'))
 # 		break
 # 	else:
 # 		time.sleep(0.8)
-
-s.close()
