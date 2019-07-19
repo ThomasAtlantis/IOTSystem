@@ -606,7 +606,7 @@ void exit_send() {
 
 // 当前逻辑下每次连接只能发送一条消息，之后就要断开连接
 uint16 WiFiRecv(uint8 *buff) {
-    uint16 read_len, l_index, r_index;
+    uint16 read_len, l_index, r_index, comma;
     uint8 buffer[UartDefaultRxLen];
     while (1) {
         _UARTRead(HAL_UART_PORT_1, buffer, &read_len);
@@ -623,11 +623,11 @@ uint16 WiFiRecv(uint8 *buff) {
             }
             if (r_index == read_len) continue;
             buffer[++ r_index] = '\0';
-            // TODO: 这里有个bug，当连接数较多时，可能出现
-            if (strcmp((char *)(buffer + r_index + 1), ",CLOSED\r\n") == 0) {
+            comma = r_index;
+            while (comma < read_len && buffer[comma] != ',') comma ++;
+            if (osal_memcmp(buffer + comma, ",CLOSED\r\n", 9)) {
                 debug(buffer + l_index);
                 strcpy((char *)buff, (char *)(buffer + l_index));
-                debug("%d\r\n", r_index + 1 - l_index);
                 return (r_index - l_index);
             }
         }
