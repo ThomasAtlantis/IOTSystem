@@ -46,8 +46,19 @@
 #define LED_RED P1_0
 #define LED_YELLOW P1_1
 #define LED_ORANGE P1_4
+
+// 可行范围：0x0401 — 0x0FFF
+#define ZD_NV_IP_ID 0x0440
+#define ZD_NV_PORT_ID 0x0430
 #define ZD_NV_SSID_ID 0x0420
 #define ZD_NV_PSWD_ID 0x0410
+
+// 长度定义，需为4的整数倍
+// 实际长度 <= LENGTH - 1
+#define SSID_MAX_LENGTH 20
+#define PSWD_MAX_LENGTH 20
+#define PORT_MAX_LENGTH 8
+#define IP_MAX_LENGTH   16
 
 #define isPressed(x) (x == Key_Active)
 #define print(x,...) _UARTSend(1,x,##__VA_ARGS__)
@@ -232,8 +243,9 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
     halUARTCfg_t uartConfig;
     uint8 _buffer[UartDefaultRxLen];
     uint8 InitNVStatus, readNVStatus, writeNVStatus;
-    uint8 SSID[20], PSWD[20];
-    uint16 length, nv_id;
+    uint8 SSID[SSID_MAX_LENGTH], PSWD[PSWD_MAX_LENGTH];
+    uint8 PORT[PORT_MAX_LENGTH], MYIP[IP_MAX_LENGTH];
+    uint16 length, nv_id, nv_len, prefix_len;
     (void)task_id;    // Intentionally unreferenced parameter
     if ( events & SYS_EVENT_MSG )
     {
@@ -258,15 +270,12 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
                     SampleApp_NwkState = (devStates_t)(MSGpkt->hdr.status);
                     if ( (SampleApp_NwkState == DEV_ZB_COORD)
                             || (SampleApp_NwkState == DEV_ROUTER)
-                            || (SampleApp_NwkState == DEV_END_DEVICE) )
-                    {
+                            || (SampleApp_NwkState == DEV_END_DEVICE) ) {
                         // Start sending the periodic message in a regular interval.
                         osal_start_timerEx( SampleApp_TaskID,
                             SAMPLEAPP_SEND_PERIODIC_MSG_EVT,
                             SAMPLEAPP_SEND_PERIODIC_MSG_TIMEOUT );
-                    }
-                    else
-                    {
+                    } else {
                         // Device is no longer in the network
                     }
                     break;
@@ -339,17 +348,31 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
         while (wait_for("OK\r\n", "ERROR\r\n", 0));
         while (1) {
             length = WiFiRecv(_buffer);
-            if (length > 6 && length <= 25) { // min: SSIDx\r\n 允许19位长度
-                if (osal_memcmp(_buffer, (uint8 *) "SSID", 4)) {
-                    nv_id = ZD_NV_SSID_ID;
+            if (length > 6) { // min: SSIDx\r\n 允许19位长度
+                if (osal_memcmp(_buffer, "IP", 2)) {
+                    nv_id = ZD_NV_IP_ID;
+                    nv_len = IP_MAX_LENGTH;
+                    prefix_len = 2;
                 } else 
-                if (osal_memcmp(_buffer, (uint8 *) "PSWD", 4)) {
+                if (osal_memcmp(_buffer, "PORT", 4)) {
+                    nv_id = ZD_NV_PORT_ID;
+                    nv_len = PORT_MAX_LENGTH;
+                    prefix_len = 4;
+                } else 
+                if (osal_memcmp(_buffer, "SSID", 4)) {
+                    nv_id = ZD_NV_SSID_ID;
+                    nv_len = SSID_MAX_LENGTH;
+                    prefix_len = 4;
+                } else 
+                if (osal_memcmp(_buffer, "PSWD", 4)) {
                     nv_id = ZD_NV_PSWD_ID;
+                    nv_len = PSWD_MAX_LENGTH;
+                    prefix_len = 4;
                 } else continue;
-                length -= 2;
-                while (length < 26) _buffer[length ++] = '\0';
-                InitNVStatus = osal_nv_item_init(nv_id, 20, NULL);
-                writeNVStatus = osal_nv_write(nv_id, 0, 20, _buffer + 4);
+                length -= 2; // \r\n
+                while (length < nv_len + prefix_len + 2) _buffer[length ++] = '\0';
+                InitNVStatus = osal_nv_item_init(nv_id, nv_len, NULL);
+                writeNVStatus = osal_nv_write(nv_id, 0, nv_len, _buffer + prefix_len);
                 (void) writeNVStatus;
             } else if (length == 4 && osal_memcmp(_buffer, (uint8 *)"OK\r\n", 4)) {
                 do debug_and_print("AT+RST\r\n");
@@ -365,18 +388,34 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
         // initialize esp8266
         do {
             exit_send();
-            InitNVStatus = osal_nv_item_init(ZD_NV_SSID_ID, 20, NULL);
-            readNVStatus = osal_nv_read(ZD_NV_SSID_ID, 0, 20, SSID);
+            InitNVStatus = osal_nv_item_init(ZD_NV_SSID_ID, SSID_MAX_LENGTH, NULL);
+            readNVStatus = osal_nv_read(ZD_NV_SSID_ID, 0, SSID_MAX_LENGTH, SSID);
             if (readNVStatus != SUCCESS || InitNVStatus != SUCCESS) {
                 debug("Read Flash Failed\r\n");
                 return (events ^ SAMPLEAPP_INITIALIZE_WIFI_EVT);
             }
-            InitNVStatus = osal_nv_item_init(ZD_NV_PSWD_ID, 20, NULL);
-            readNVStatus = osal_nv_read(ZD_NV_PSWD_ID, 0, 20, PSWD);
+            debug(SSID);
+            InitNVStatus = osal_nv_item_init(ZD_NV_PSWD_ID, PSWD_MAX_LENGTH, NULL);
+            readNVStatus = osal_nv_read(ZD_NV_PSWD_ID, 0, PSWD_MAX_LENGTH, PSWD);
             if (readNVStatus != SUCCESS || InitNVStatus != SUCCESS) {
                 debug("Read Flash Failed\r\n");
                 return (events ^ SAMPLEAPP_INITIALIZE_WIFI_EVT);
             }
+            debug(PSWD);
+            InitNVStatus = osal_nv_item_init(ZD_NV_IP_ID, IP_MAX_LENGTH, NULL);
+            readNVStatus = osal_nv_read(ZD_NV_IP_ID, 0, IP_MAX_LENGTH, MYIP);
+            if (readNVStatus != SUCCESS || InitNVStatus != SUCCESS) {
+                debug("Read Flash Failed\r\n");
+                return (events ^ SAMPLEAPP_INITIALIZE_WIFI_EVT);
+            }
+            debug(MYIP);
+            InitNVStatus = osal_nv_item_init(ZD_NV_PORT_ID, PORT_MAX_LENGTH, NULL);
+            readNVStatus = osal_nv_read(ZD_NV_PORT_ID, 0, PORT_MAX_LENGTH, PORT);
+            if (readNVStatus != SUCCESS || InitNVStatus != SUCCESS) {
+                debug("Read Flash Failed\r\n");
+                return (events ^ SAMPLEAPP_INITIALIZE_WIFI_EVT);
+            }
+            debug(PORT);
 
             do debug_and_print("AT+CWMODE=1\r\n");
             while (wait_for("OK\r\n", "ERROR\r\n", 0));
@@ -386,7 +425,7 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
             while (wait_for("OK\r\n", "ERROR\r\n", 0));
             do debug_and_print("AT+CIPMODE=1\r\n");
             while (wait_for("OK\r\n", "ERROR\r\n", 0));
-            do debug_and_print("AT+CIPSTART=\"TCP\",\"192.168.1.104\",8000\r\n");
+            do debug_and_print("AT+CIPSTART=\"TCP\",\"%s\",%s\r\n", MYIP, PORT);
             while (wait_for("OK\r\n", "CLOSED\r\n", 0));
             debug_and_print("AT+CIPSEND\r\n");
         } while (wait_for(">", "ERROR\r\n", 0));
