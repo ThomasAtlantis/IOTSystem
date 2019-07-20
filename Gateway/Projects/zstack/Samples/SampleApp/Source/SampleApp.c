@@ -38,7 +38,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#define UartDefaultRxLen 50
+#define UartDefaultRxLen 64
 #define UartDefaultTxLen 64
 #define Key_S1 P0_0
 #define Key_S2 P0_1
@@ -75,6 +75,7 @@ void _delay_ms(uint16 n);
 uint8 wait_for(uint8 *str, uint8 *err, uint16 timeout);
 void exit_send(void);
 uint16 WiFiRecv(uint8 *buff);
+uint8 WiFiSend(uint8 *fmt, ...);
 
 // This list should be filled with Application specific Cluster IDs.
 const cId_t SampleApp_ClusterList[SAMPLEAPP_MAX_CLUSTERS] =
@@ -336,9 +337,12 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
 
     if (events & SAMPLEAPP_CONFIGURE_WIFI_EVT) {
         exit_send();
+        _UARTRead(HAL_UART_PORT_1, _buffer, &length);
+        do debug_and_print("AT+RST\r\n");
+        while (wait_for("ready\r\n", "ERROR\r\n", 0));
         do debug_and_print("AT+CWMODE=2\r\n");
         while (wait_for("OK\r\n", "ERROR\r\n", 0));
-        do debug_and_print("AT+CWSAP=\"ESP8266\",\"123456\",11,0\r\n");
+        do debug_and_print("AT+CWSAP=\"ESP8266\",\"123456\",11,0\r\n"); // TODO: ADD MACRO
         while (wait_for("OK\r\n", "ERROR\r\n", 0));
         do debug_and_print("AT+CIPMODE=0\r\n");
         while (wait_for("OK\r\n", "ERROR\r\n", 0));
@@ -346,6 +350,9 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
         while (wait_for("OK\r\n", "ERROR\r\n", 0)); 
         do debug_and_print("AT+CIPSERVER=1,8266\r\n");
         while (wait_for("OK\r\n", "ERROR\r\n", 0));
+        do {
+            while (wait_for("0,CONNECT\r\n", "0,CONNECT FAIL\r\n", 0));
+        } while (WiFiSend("CTS\r\n")); // 告诉APP连接已建立，二次握手
         while (1) {
             length = WiFiRecv(_buffer);
             if (length > 6) { // min: SSIDx\r\n 允许19位长度
@@ -353,28 +360,35 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
                     nv_id = ZD_NV_IP_ID;
                     nv_len = IP_MAX_LENGTH;
                     prefix_len = 2;
+                    WiFiSend("GOT IP\r\n");
                 } else 
                 if (osal_memcmp(_buffer, "PORT", 4)) {
                     nv_id = ZD_NV_PORT_ID;
                     nv_len = PORT_MAX_LENGTH;
                     prefix_len = 4;
+                    WiFiSend("GOT PORT\r\n");
                 } else 
                 if (osal_memcmp(_buffer, "SSID", 4)) {
                     nv_id = ZD_NV_SSID_ID;
                     nv_len = SSID_MAX_LENGTH;
                     prefix_len = 4;
+                    WiFiSend("GOT SSID\r\n");
                 } else 
                 if (osal_memcmp(_buffer, "PSWD", 4)) {
                     nv_id = ZD_NV_PSWD_ID;
                     nv_len = PSWD_MAX_LENGTH;
                     prefix_len = 4;
+                    WiFiSend("GOT PSWD\r\n");
                 } else continue;
                 length -= 2; // \r\n
                 while (length < nv_len + prefix_len + 2) _buffer[length ++] = '\0';
                 InitNVStatus = osal_nv_item_init(nv_id, nv_len, NULL);
                 writeNVStatus = osal_nv_write(nv_id, 0, nv_len, _buffer + prefix_len);
+                HalUARTWrite(1, _buffer + prefix_len, nv_len);
                 (void) writeNVStatus;
             } else if (length == 4 && osal_memcmp(_buffer, (uint8 *)"OK\r\n", 4)) {
+                WiFiSend("OVER\r\n");
+                _delay_ms(10);
                 do debug_and_print("AT+RST\r\n");
                 while (wait_for("ready\r\n", "ERROR\r\n", 0));
                 break;
@@ -643,32 +657,37 @@ void exit_send() {
 }
 
 
-// 当前逻辑下每次连接只能发送一条消息，之后就要断开连接
+uint8 WiFiSend(uint8 *fmt, ...) {
+    va_list arg_ptr;
+    uint8 buffer[UartDefaultTxLen], cnt;
+    uint16 length = 0;
+    for(cnt = 0 ; cnt < UartDefaultTxLen ; cnt++)
+        buffer[cnt] = 0x00;
+    va_start(arg_ptr, fmt);
+    length = vsprintf((char *)buffer, (const char *)fmt, arg_ptr);
+    va_end(arg_ptr);
+    debug_and_print("AT+CIPSEND=0,%d\r\n", length);
+    _delay_ms(10);
+    // if (wait_for(">", "ERROR\r\n", 0)) return 1;
+    HalUARTWrite(1, (uint8 *)buffer, length);
+    return wait_for("SEND OK\r\n", "SEND FAIL\r\n", 0);
+}
+
 uint16 WiFiRecv(uint8 *buff) {
-    uint16 read_len, l_index, r_index, comma;
+    uint16 read_len, l_index;
     uint8 buffer[UartDefaultRxLen];
     while (1) {
         _UARTRead(HAL_UART_PORT_1, buffer, &read_len);
         _delay_ms(1);
-        if (read_len > 34) { // at least "0,CONNECT\r\n\r\n+IPD,0,2:\r\n0,CLOSED\r\n"
+        if (read_len > 10) { // at least 11 chars "+IPD,0,X:\r\n"
             l_index = 0;
             while (l_index < read_len && buffer[l_index] != ':') {
                 l_index ++;
             }
             if (l_index == read_len) continue;
-            r_index = ++ l_index;
-            while (r_index < read_len && buffer[r_index] != '\n') {
-                r_index ++;
-            }
-            if (r_index == read_len) continue;
-            buffer[++ r_index] = '\0';
-            comma = r_index;
-            while (comma < read_len && buffer[comma] != ',') comma ++;
-            if (osal_memcmp(buffer + comma, ",CLOSED\r\n", 9)) {
-                debug(buffer + l_index);
-                strcpy((char *)buff, (char *)(buffer + l_index));
-                return (r_index - l_index);
-            }
+            l_index ++;
+            osal_memcpy(buff, buffer + l_index, read_len - l_index);
+            return (read_len - l_index);
         }
     }
 }
