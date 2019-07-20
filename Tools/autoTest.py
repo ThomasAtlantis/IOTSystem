@@ -14,7 +14,7 @@ WIFI_SSID_AP, WIFI_PSWD_AP = "liuchen", "liuchen88"
 AUTH_TYPE_AP = "ENCRYPTED"
 WIFI_SSID_ESP, WIFI_PSWD_ESP = "ESP8266", "123456"
 AUTH_TYPE_ESP = "OPEN"
-SERVER_IP, SERVER_PORT = "192.168.1.104", 8000
+SERVER_IP, SERVER_PORT = "192.168.1.102", 8000
 SERVER_SOCKET = (SERVER_IP, SERVER_PORT)
 GATEWAY_IP, GATEWAY_PORT = "192.168.4.1", 8266
 GATEWAY_SOCKET = (GATEWAY_IP, GATEWAY_PORT)
@@ -60,24 +60,53 @@ def connect(wifi_name, wifi_password, auth_type):
 		return False
 
 def configure_WiFi():
-	# 在实际的小程序中还需要加入超时检测，计算重发次数，超过五次提示用户出错
 	# 需要格外注意的是，给网关发消息必须以\r\n结尾
-	print("configure WiFi ...", end="")
+	buff = ""
+	print("configure WiFi")
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+	# connect handshake
 	s.connect(GATEWAY_SOCKET)
-	s.send("SSIDliuchen\r\n".encode('utf-8'))
-	s.close()
-	time.sleep(0.8)
-	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	s.connect(GATEWAY_SOCKET)
-	s.send("PSWDliuchen88\r\n".encode('utf-8'))
-	s.close()
-	time.sleep(0.8)
-	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	s.connect(GATEWAY_SOCKET)
-	s.send("OK\r\n".encode('utf-8'))
-	s.close()
+	print("connecting ... ", end="", flush=True)
+	while not buff == "CTS\r\n":
+		buff = s.recv(128).decode("utf-8")
 	print("done")
+
+	time.sleep(1.5)
+	# set ip handshake
+	while not buff == "GOT IP\r\n":
+		s.send("IP{}\r\n".format(SERVER_IP).encode('utf-8'))
+		time.sleep(0.5)
+		buff = s.recv(128).decode("utf-8")
+
+	time.sleep(1.5)
+	# set port handshake
+	while not buff == "GOT PORT\r\n":
+		s.send("PORT{}\r\n".format(SERVER_PORT).encode('utf-8'))
+		time.sleep(0.5)
+		buff = s.recv(128).decode("utf-8")
+
+	time.sleep(1.5)
+	# set ssid handshake
+	while not buff == "GOT SSID\r\n":
+		s.send("SSID{}\r\n".format(WIFI_SSID_AP).encode('utf-8'))
+		time.sleep(0.5)
+		buff = s.recv(128).decode("utf-8")
+
+	time.sleep(1.5)
+	# set pswd handshake
+	while not buff == "GOT PSWD\r\n":
+		s.send("PSWD{}\r\n".format(WIFI_PSWD_AP).encode('utf-8'))
+		time.sleep(0.5)
+		buff = s.recv(128).decode("utf-8")
+	
+	time.sleep(1.5)
+	for i in range(10):
+		s.send("OK\r\n".encode('utf-8'))
+		time.sleep(0.1)
+	buff = s.recv(128).decode("utf-8")
+	s.close()
+	print("configure WiFi Finished")
 
 
 def get_local_ip():
@@ -113,7 +142,7 @@ class Client(threading.Thread):
 	def run(self):
 		while True:
 			szBuf = self.conn.recv(128)
-			conn.send("received\r\n".encode("utf-8"))
+			self.conn.send("received\r\n".encode("utf-8"))
 			print(szBuf)
 	
 	def _get_my_tid(self):
@@ -140,13 +169,11 @@ class Client(threading.Thread):
 		self.raise_exc(SystemExit)
 
 def run_server():
-	thisIP = get_local_ip()
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	print((thisIP, SERVER_PORT))
-	sock.bind((thisIP, SERVER_PORT))
+	sock.bind(SERVER_SOCKET)
 	sock.settimeout(None)
 	sock.listen(10)
-	print("listening on {}:{} ...".format(thisIP, SERVER_PORT))
+	print("listening on {}:{} ...".format(*SERVER_SOCKET))
 	try:
 		while True:
 			conn, addr = sock.accept()
@@ -168,12 +195,15 @@ def run_server():
 		sys.exit()
 
 if __name__ == '__main__':
+	while not connect(WIFI_SSID_AP, WIFI_PSWD_AP, AUTH_TYPE_AP):
+		pass
+	SERVER_IP = get_local_ip()
 	time.sleep(5)
-	if not connect(WIFI_SSID_ESP, WIFI_PSWD_ESP, AUTH_TYPE_ESP):
-		sys.exit(1)
+	while not connect(WIFI_SSID_ESP, WIFI_PSWD_ESP, AUTH_TYPE_ESP):
+		pass
 	time.sleep(5)
 	configure_WiFi()
 	time.sleep(2)
-	if not connect(WIFI_SSID_AP, WIFI_PSWD_AP, AUTH_TYPE_AP):
-		sys.exit(1)
+	while not connect(WIFI_SSID_AP, WIFI_PSWD_AP, AUTH_TYPE_AP):
+		pass
 	run_server()

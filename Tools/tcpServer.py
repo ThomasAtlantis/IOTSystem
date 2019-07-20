@@ -43,7 +43,7 @@ class Client(threading.Thread):
 	def run(self):
 		while True:
 			szBuf = self.conn.recv(128)
-			conn.send("received\r\n".encode("utf-8"))
+			self.conn.send("received\r\n".encode("utf-8"))
 			print(szBuf)
 	
 	def _get_my_tid(self):
