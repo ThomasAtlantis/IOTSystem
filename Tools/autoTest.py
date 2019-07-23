@@ -10,7 +10,8 @@ import platform
 import re
 
 # Global arguments
-WIFI_SSID_AP, WIFI_PSWD_AP = "liuchen", "liuchen88"
+# WIFI_SSID_AP, WIFI_PSWD_AP = "liuchen", "liuchen88"
+WIFI_SSID_AP, WIFI_PSWD_AP = "Atlantis", "21396878335"
 AUTH_TYPE_AP = "ENCRYPTED"
 WIFI_SSID_ESP, WIFI_PSWD_ESP = "ESP8266", "123456"
 AUTH_TYPE_ESP = "OPEN"
@@ -198,6 +199,7 @@ if __name__ == '__main__':
 	while not connect(WIFI_SSID_AP, WIFI_PSWD_AP, AUTH_TYPE_AP):
 		pass
 	SERVER_IP = get_local_ip()
+	SERVER_SOCKET = (SERVER_IP, SERVER_PORT)
 	time.sleep(5)
 	while not connect(WIFI_SSID_ESP, WIFI_PSWD_ESP, AUTH_TYPE_ESP):
 		pass

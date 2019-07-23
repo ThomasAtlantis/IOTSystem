@@ -28,14 +28,9 @@
 ### 接口文档
 #### 小程序配置网关信息
 ```
-IP地址：
-	"IPx.x.x.x\r\n"
-端口：
-	"PORTxxxx\r\n"
-WiFi名称：
-	"SSIDabcd\r\n"
-WiFi密码：
-	"PSWDabcd\r\n"
-配置完毕：
-	"OK\r\n"
+IP地址：	"IPx.x.x.x\r\n"
+端口：		"PORTxxxx\r\n"
+WiFi名称：	"SSIDabcd\r\n"
+WiFi密码：	"PSWDabcd\r\n"
+配置完毕：	"OK\r\n"
 ```
