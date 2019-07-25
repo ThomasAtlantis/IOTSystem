@@ -91,7 +91,7 @@ class WebServer(threading.Thread):
 		return params
 
 	def handle_client(self, client_socket):
-		request_data = client_socket.recv(1024)
+		request_data = client_socket.recv(512)
 		request_lines = request_data.splitlines()
 		if request_lines:
 			print("request: {}".format(request_lines[0]))
@@ -139,7 +139,10 @@ class WebServer(threading.Thread):
 				file_flag = True
 			elif "/gateway-info" == file_name:
 				if gateway.addr:
-					response_body = "{}:{}".format(*gateway.addr)
+					response_body = json.dumps({
+						"ip": gateway.addr[0],
+						"port": gateway.addr[1]
+					})
 			elif "/portal" == file_name:
 				if 'type' not in params:
 					response_body = json.dumps({
@@ -151,7 +154,7 @@ class WebServer(threading.Thread):
 					if _type == "heartbeat":
 						gateway.send("heartbeat\r\n")
 						while True:
-							_buff = gateway.recv(128)
+							_buff = gateway.recv(512)
 							if _buff == "received":
 								response_body = json.dumps({
 									"type": "received"
@@ -159,15 +162,15 @@ class WebServer(threading.Thread):
 								break
 					elif _type == "request":
 						_name = params['name']
-						if _name in ["temprature", "humidity"]:
+						if _name in ["temperature", "humidity"]:
 							_number = params['number']
 							gateway.send("{}{}\r\n".format(_name, _number))
 							while True:
-								_buff = gateway.recv(128)
-								if _buff.startswith("temprature"):
+								_buff = gateway.recv(512)
+								if _buff.startswith("temperature"):
 									response_body = json.dumps({
 										"type": "response",
-										"name": "temprature",
+										"name": "temperature",
 										"number": _number,
 										"result": int(_buff[10:])
 									})
@@ -185,7 +188,7 @@ class WebServer(threading.Thread):
 						if _name == "light-on":
 							gateway.send(_name + "\r\n")
 							while True:
-								_buff = gateway.recv(128)
+								_buff = gateway.recv(512)
 								if _buff == "OK":
 									response_body = json.dumps({
 										"type": "command",

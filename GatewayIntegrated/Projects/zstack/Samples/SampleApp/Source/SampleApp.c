@@ -501,6 +501,7 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
 	}
 
 	if (events & SAMPLEAPP_SEND_HEART_BEAT_EVT) {
+		
 		debug_and_print("heart beat\r\n");
 		SampleApp_SendGroupMessage();
 		if (wait_for("received\r\n", "ERROR\r\n", 200)) {
@@ -815,7 +816,11 @@ uint16 WiFiRecv(uint8 *buff) {
 	while (1) {
 		_UARTRead(HAL_UART_PORT_1, buffer, &read_len);
 		_delay_ms(1);
-		if (read_len > 10) { // at least 11 chars "+IPD,0,X:\r\n"
+		// at least 11 chars "+IPD,0,X:\r\n"
+		if (read_len > 10 
+			&& buffer[read_len - 2] == '\r' 
+			&& buffer[read_len - 2] == '\n'
+		) {
 			l_index = 0;
 			while (l_index < read_len && buffer[l_index] != ':') {
 				l_index ++;
