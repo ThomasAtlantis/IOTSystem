@@ -73,35 +73,35 @@ def configure_WiFi():
 		buff = s.recv(128).decode("utf-8")
 	print("done")
 
-	time.sleep(1.5)
+	time.sleep(2)
 	# set ip handshake
 	while not buff == "GOT IP\r\n":
 		s.send("IP{}\r\n".format(SERVER_IP).encode('utf-8'))
 		time.sleep(0.5)
 		buff = s.recv(128).decode("utf-8")
 
-	time.sleep(1.5)
+	time.sleep(2)
 	# set port handshake
 	while not buff == "GOT PORT\r\n":
 		s.send("PORT{}\r\n".format(SERVER_PORT).encode('utf-8'))
 		time.sleep(0.5)
 		buff = s.recv(128).decode("utf-8")
 
-	time.sleep(1.5)
+	time.sleep(2)
 	# set ssid handshake
 	while not buff == "GOT SSID\r\n":
 		s.send("SSID{}\r\n".format(WIFI_SSID_AP).encode('utf-8'))
 		time.sleep(0.5)
 		buff = s.recv(128).decode("utf-8")
 
-	time.sleep(1.5)
+	time.sleep(2)
 	# set pswd handshake
 	while not buff == "GOT PSWD\r\n":
 		s.send("PSWD{}\r\n".format(WIFI_PSWD_AP).encode('utf-8'))
 		time.sleep(0.5)
 		buff = s.recv(128).decode("utf-8")
 	
-	time.sleep(1.5)
+	time.sleep(2)
 	for i in range(10):
 		s.send("OK\r\n".encode('utf-8'))
 		time.sleep(0.1)

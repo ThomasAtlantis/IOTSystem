@@ -41,6 +41,7 @@
 |GET|liushangyu.xyz/portal|type=heartbeat|{"type":"received"}|发送心跳包检测连接活性|
 |GET|liushangyu.xyz/portal|type=request&name=temperature&number=%x|{"type":"response","name": "temperature","number": %x,"result": %y}|获取%x号传感器温度|
 |GET|liushangyu.xyz/portal|type=request&name=humidity&number=%x|{"type":"response","name": "humidity","number": %x,"result": %y}|获取%x号传感器湿度|
+|GET|liushangyu.xyz/portal|type=request&name=environment|{'name': 'environment', 'data': {'humidity': [[2, 33], [0, 24], [1, 14]], 'temperature': [[0, 23], [2, 22], [1, 6]]}, 'type': 'response'}|一次请求所有传感器数据|
 |GET|liushangyu.xyz/portal|type=command&name=light-on|{"type":"command","name":"light-on","back": "OK"}|开鱼缸LED灯|
 |GET|liushangyu.xyz/portal|type=command&name=drain-water|{"type":"command","name":"drain-water","back": "OK"}|排水模式：将会屏蔽水位传感器|
 |GET|liushangyu.xyz/portal|type=command&name=draw-water|{"type":"command","name":"draw-water","back": "OK"}|抽水|

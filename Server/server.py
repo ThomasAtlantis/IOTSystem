@@ -7,9 +7,9 @@ import re
 import sys
 
 # Global arguments
-WEB_SERVER_IP, WEB_SERVER_PORT = "localhost", 80
+WEB_SERVER_IP, WEB_SERVER_PORT = "172.16.252.95", 80
 WEB_SERVER_SOCKET = (WEB_SERVER_IP, WEB_SERVER_PORT)
-TCP_SERVER_IP, TCP_SERVER_PORT = "localhost", 8000
+TCP_SERVER_IP, TCP_SERVER_PORT = "172.16.252.95", 8000
 TCP_SERVER_SOCKET = (TCP_SERVER_IP, TCP_SERVER_PORT)
 HTML_ROOT_DIR = "./html"  # 设置静态文件根目录
 WSGI_ROOT_DIR = "./wsgi"  # 设置动态文件根目录
@@ -31,13 +31,10 @@ class Client():
 
 	def recv(self, byte):
 		text = ""
-		if self.conn:
+		while self.conn and not text:
 			text = gateway.conn.recv(byte).decode('utf-8')
-			print("Recv from [{}]: {}".format(self.name, text.encode('utf-8')))
+		print("Recv from [{}]: {}".format(self.name, text.encode('utf-8')))
 		return text
-
-	def get_addr():
-		self.conn.
 
 # Global variables
 gateway = Client("Gateway", None, None)
@@ -93,8 +90,10 @@ class WebServer(threading.Thread):
 	def handle_client(self, client_socket):
 		request_data = client_socket.recv(512)
 		request_lines = request_data.splitlines()
-		if request_lines:
-			print("request: {}".format(request_lines[0]))
+		if not request_lines:
+			client_socket.close()
+			return
+		print("request: {}".format(request_lines[0]))
 
 		# 解析请求报文
 		request_start_line = request_lines[0]
@@ -162,7 +161,33 @@ class WebServer(threading.Thread):
 								break
 					elif _type == "request":
 						_name = params['name']
-						if _name in ["temperature", "humidity"]:
+						if _name == "environment":
+							gateway.send("environment\r\n")
+							while True:
+								_buff = gateway.recv(512)
+								data_dict = {}
+								try:
+									for item in _buff.split('&'):
+										tmp = item.split('?')
+										data_dict[tmp[0]] = [
+											[
+												int(pair.split('=')[0]),
+												int(pair.split('=')[1]),
+											] for pair in tmp[1].split(',')]
+								except Exception as err:
+									print(err)
+									response_body = json.dumps({
+										"type": "error",
+										"code": "3"
+									})
+									break
+								response_body = json.dumps({
+									"type": "response",
+									"name": "environment",
+									"data": data_dict
+								})
+								break
+						elif _name in ["temperature", "humidity"]:
 							_number = params['number']
 							gateway.send("{}{}\r\n".format(_name, _number))
 							while True:
@@ -172,7 +197,7 @@ class WebServer(threading.Thread):
 										"type": "response",
 										"name": "temperature",
 										"number": _number,
-										"result": int(_buff[10:])
+										"result": int(_buff[11:])
 									})
 									break
 								elif _buff.startswith("humidity"):
@@ -185,7 +210,15 @@ class WebServer(threading.Thread):
 									break
 					elif _type == "command":
 						_name = params['name']
-						if _name == "light-on":
+						if _name in [
+								"light-on", 
+								"humidify", 
+								"stop-humidify", 
+								"drain-water", 
+								"draw-water", 
+								"change-water"
+							]:
+							print("Command:", _name)
 							gateway.send(_name + "\r\n")
 							while True:
 								_buff = gateway.recv(512)
@@ -195,6 +228,7 @@ class WebServer(threading.Thread):
 										"name": _name,
 										"back": "OK"
 									})
+									gateway.send("received\r\n")
 									break
 					else:
 						response_body = json.dumps({
@@ -203,6 +237,7 @@ class WebServer(threading.Thread):
 						})
 			if file_flag:
 				# 打开文件，读取内容
+				file_data = ""
 				try:
 					file = open(HTML_ROOT_DIR + file_name, "rb")
 				except IOError:
@@ -210,9 +245,9 @@ class WebServer(threading.Thread):
 					response_headers = "Server: My server\r\n"
 					response_body = "The file is not found!"
 				else:
-					file_data = file.read()
+					file_data = file.read().decode("utf-8")
 					file.close()
-				response_body = file_data.decode("utf-8")
+				response_body = file_data
 
 			response = response_start_line + response_headers + '\r\n' + response_body
 		
