@@ -47,6 +47,7 @@
 |GET|liushangyu.xyz/portal|type=command&name=change-water|{"type":"command","name":"change-water","back": "OK"}|换水|
 |GET|liushangyu.xyz/portal|type=command&name=humidify|{"type":"command","name":"humidify","back": "OK"}|加湿|
 |GET|liushangyu.xyz/portal|type=command&name=stop-humidify|{"type":"command","name":"stop-humidify","back": "OK"}|停止加湿|
+
 注意：
 + %x，%y仅表示变量，数据格式中不包含%
 + 所有方法的返回数据均为json格式，以双引号引起的为字符串，否则为数值类型
