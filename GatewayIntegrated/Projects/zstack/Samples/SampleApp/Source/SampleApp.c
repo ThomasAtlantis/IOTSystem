@@ -268,7 +268,6 @@ void SampleApp_Init( uint8 task_id )
 #if defined ( LCD_SUPPORTED )
   HalLcdWriteString( "SampleApp", HAL_LCD_LINE_1 );
 #endif
-  osal_set_event(SampleApp_TaskID, SAMPLEAPP_INITIALIZE_UART_EVT);
 }
 
 /*********************************************************************
@@ -284,9 +283,8 @@ void SampleApp_Init( uint8 task_id )
  *
  * @return  none
  */
-uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
-{
-  afIncomingMSGPacket_t *MSGpkt;
+uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events ) {
+	afIncomingMSGPacket_t *MSGpkt;
 	halUARTCfg_t uartConfig;
 	uint8 _buffer[UartDefaultRxLen];
 	uint8 InitNVStatus, readNVStatus, writeNVStatus;
@@ -320,9 +318,10 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
 			  || (SampleApp_NwkState == DEV_END_DEVICE) )
 		  {
 			// Start sending the periodic message in a regular interval.
-			osal_start_timerEx( SampleApp_TaskID,
-							  SAMPLEAPP_SEND_PERIODIC_MSG_EVT,
-							  SAMPLEAPP_SEND_PERIODIC_MSG_TIMEOUT );
+			// osal_start_timerEx(SampleApp_TaskID,
+			// 				  SAMPLEAPP_SEND_PERIODIC_MSG_EVT,
+			// 				  SAMPLEAPP_SEND_PERIODIC_MSG_TIMEOUT);
+			osal_set_event(SampleApp_TaskID, SAMPLEAPP_INITIALIZE_UART_EVT);
 		  }
 		  else
 		  {
@@ -487,10 +486,52 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
 
 	if (events & SAMPLEAPP_SEND_HEART_BEAT_EVT) {
 		length = WiFiRecv(_buffer);
-		if (osal_memcmp(_buffer, "humidify\r\n", 10)) {
-			_zigbeeSend("humidify\r\n\0");
+		if (length > 0) debug(_buffer);
+		if (osal_memcmp(_buffer, "heartbeat\r\n", 11)) { // 心跳包
+			WiFiSend("received\r\n");
+		} else
+		if (osal_memcmp(_buffer, "environment\r\n", 13)) { // 一次返回所有数据
+			// data = "humidity?{}&temperature?{}"
+			// humidity = [str(i) + "=" + str(random.randint(0, 40)) for i in range(3)]
+			// temperature = [str(i) + "=" + str(random.randint(0, 40)) for i in range(3)]
+			// random.shuffle(humidity)
+			// random.shuffle(temperature)
+			// humidity = ",".join(humidity)
+			// temperature = ",".join(temperature)
+			// s.send(data.format(humidity, temperature).encode('utf-8'))
+		} else 
+		if (osal_memcmp(_buffer, "temperature", 11)) { // 温度
+			_zigbeeSend("temperature\r\n\0");
+			// WiFiSend("OK\r\n");
+		} else
+		if (osal_memcmp(_buffer, "humidity", 8)) { // 湿度
+			_zigbeeSend("humidity\r\n");
+			// WiFiSend("OK\r\n");
+		} else
+		if (osal_memcmp(_buffer, "light-on\r\n", 10)) { // 开灯
+			_zigbeeSend("light-on\r\n");
+			WiFiSend("OK\r\n");
+		} else
+		if (osal_memcmp(_buffer, "humidify\r\n", 10)) { // 加湿
+			_zigbeeSend("humidify\r\n");
+			WiFiSend("OK\r\n");
+		} else
+		if (osal_memcmp(_buffer, "stop-humidify\r\n", 15)) { // 停止加湿
+			_zigbeeSend("stop-humidify\r\n");
+			WiFiSend("OK\r\n");
+		} else
+		if (osal_memcmp(_buffer, "drain-water\r\n", 13)) { // 出水
+			_zigbeeSend("drain-water\r\n");
+			WiFiSend("OK\r\n");
+		} else
+		if (osal_memcmp(_buffer, "draw-water\r\n", 12)) { // 进水
+			_zigbeeSend("draw-water\r\n");
+			WiFiSend("OK\r\n");
+		} else
+		if (osal_memcmp(_buffer, "change-water\r\n", 14)) { // 换水
+			_zigbeeSend("change-water\r\n");
+			WiFiSend("OK\r\n");
 		}
-		WiFiSend("OK\r\n");
 		if (wait_for("received\r\n", "ERROR\r\n", 200)) {
 			debug("WIFI RESET\r\n");
 			osal_set_event(SampleApp_TaskID, SAMPLEAPP_INITIALIZE_WIFI_EVT);
@@ -697,7 +738,8 @@ void _zigbeeSend(uint8 *fmt, ...) {
 	if (AF_DataRequest(&SampleApp_Flash_DstAddr, &SampleApp_epDesc,
 		SAMPLEAPP_FLASH_CLUSTERID, length, _buffer,
 		&SampleApp_TransID, AF_DISCV_ROUTE, AF_DEFAULT_RADIUS) == afStatus_SUCCESS) {
-	} else {}
+		
+	}
 }
 
 void _UARTSend(uint8 port, uint8 *fmt, ...) {

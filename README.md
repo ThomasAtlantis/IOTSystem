@@ -53,3 +53,7 @@
 + %x，%y仅表示变量，数据格式中不包含%
 + 所有方法的返回数据均为json格式，以双引号引起的为字符串，否则为数值类型
 + get请求格式示例：`liushangyu.xyz/portal?type=request&name=temperature&number=1`，但js的get方法可以把URL（liushangyu.xyz/portal）和表单（type=...）分开写
+
+### 包装
+ESP8266封装
+自动化配置网关

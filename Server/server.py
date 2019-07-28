@@ -5,11 +5,14 @@ import socket
 import json
 import re
 import sys
+import time
 
 # Global arguments
-WEB_SERVER_IP, WEB_SERVER_PORT = "172.16.252.95", 80
+# WEB_SERVER_IP, WEB_SERVER_PORT = "172.16.252.95", 8000
+WEB_SERVER_IP, WEB_SERVER_PORT = "localhost", 80
 WEB_SERVER_SOCKET = (WEB_SERVER_IP, WEB_SERVER_PORT)
-TCP_SERVER_IP, TCP_SERVER_PORT = "172.16.252.95", 8000
+# TCP_SERVER_IP, TCP_SERVER_PORT = "172.16.252.95", 8266
+TCP_SERVER_IP, TCP_SERVER_PORT = "localhost", 8266
 TCP_SERVER_SOCKET = (TCP_SERVER_IP, TCP_SERVER_PORT)
 HTML_ROOT_DIR = "./html"  # 设置静态文件根目录
 WSGI_ROOT_DIR = "./wsgi"  # 设置动态文件根目录
@@ -25,15 +28,18 @@ class Client():
 		if self.conn:
 			print("Send to [{}]: {}".format(self.name, text.encode('utf-8')))
 			try:
-				self.conn.send(text.encode('utf-8'))
+				self.conn.send(("#" + text).encode('utf-8'))
 			except ConnectionResetError:
 				print("ERROR 1: ConnectionResetError")
 
 	def recv(self, byte):
 		text = ""
 		while self.conn and not text:
-			text = gateway.conn.recv(byte).decode('utf-8')
-		print("Recv from [{}]: {}".format(self.name, text.encode('utf-8')))
+			tmp = gateway.conn.recv(byte)
+			if tmp:
+				print("Recv from [{}]: {}".format(self.name, tmp))
+				text = tmp.decode('utf-8')
+				break
 		return text
 
 # Global variables
@@ -155,6 +161,8 @@ class WebServer(threading.Thread):
 						while True:
 							_buff = gateway.recv(512)
 							if _buff == "received":
+								time.sleep(0.5)
+								
 								response_body = json.dumps({
 									"type": "received"
 								})
@@ -166,26 +174,30 @@ class WebServer(threading.Thread):
 							while True:
 								_buff = gateway.recv(512)
 								data_dict = {}
-								try:
-									for item in _buff.split('&'):
-										tmp = item.split('?')
-										data_dict[tmp[0]] = [
-											[
-												int(pair.split('=')[0]),
-												int(pair.split('=')[1]),
-											] for pair in tmp[1].split(',')]
-								except Exception as err:
-									print(err)
-									response_body = json.dumps({
-										"type": "error",
-										"code": "3"
-									})
-									break
+								# try:
+								for item in _buff.split('&'):
+									print(item)
+									tmp = item.split('?')
+									data_dict[tmp[0]] = []
+									for pair in tmp[1].split(','):
+										n, value = pair.split('=')
+										n = int(n)
+										value = int(value) if value else 0
+										data_dict[tmp[0]].append([n, value])
+								# except Exception as err:
+									# print(err)
+									# response_body = json.dumps({
+										# "type": "error",
+										# "code": "3"
+									# })
+									
+									# break
 								response_body = json.dumps({
 									"type": "response",
 									"name": "environment",
 									"data": data_dict
 								})
+								
 								break
 						elif _name in ["temperature", "humidity"]:
 							_number = params['number']
@@ -199,6 +211,7 @@ class WebServer(threading.Thread):
 										"number": _number,
 										"result": int(_buff[11:])
 									})
+									
 									break
 								elif _buff.startswith("humidity"):
 									response_body = json.dumps({
@@ -207,16 +220,21 @@ class WebServer(threading.Thread):
 										"number": _number,
 										"result": int(_buff[8:])
 									})
+									
 									break
 					elif _type == "command":
 						_name = params['name']
 						if _name in [
-								"light-on", 
+								"light-on",
+								"light-off", 
 								"humidify", 
 								"stop-humidify", 
-								"drain-water", 
+								"drain-water",
+								"stop-drain-water", 
 								"draw-water", 
-								"change-water"
+								"change-water",
+								"water",
+								"stop-water",
 							]:
 							print("Command:", _name)
 							gateway.send(_name + "\r\n")
@@ -228,7 +246,7 @@ class WebServer(threading.Thread):
 										"name": _name,
 										"back": "OK"
 									})
-									gateway.send("received\r\n")
+									
 									break
 					else:
 						response_body = json.dumps({

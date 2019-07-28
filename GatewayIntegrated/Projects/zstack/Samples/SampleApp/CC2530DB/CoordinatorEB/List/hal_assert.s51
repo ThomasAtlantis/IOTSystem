@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// IAR C/C++ Compiler V10.20.1.5333 for 8051              23/Jul/2019  11:20:49
+// IAR C/C++ Compiler V10.20.1.5333 for 8051              26/Jul/2019  15:41:19
 // Copyright 2004-2018 IAR Systems AB.
 // PC-locked license - IAR Embedded Workbench for 8051
 //
@@ -14,7 +14,7 @@
 //    Source file        =  
 //        F:\IAR\8051_work\2、温湿度传感组播_协调器\Components\hal\common\hal_assert.c
 //    Command line       =  
-//        -f C:\Users\MAC\AppData\Local\Temp\EWBCC4.tmp
+//        -f C:\Users\MAC\AppData\Local\Temp\EW98AC.tmp
 //        (F:\IAR\8051_work\2、温湿度传感组播_协调器\Components\hal\common\hal_assert.c
 //        -D ZTOOL_P1 -D xMT_TASK -D xMT_SYS_FUNC -D xMT_ZDO_FUNC -D
 //        HAL_UART_DMA=1 -D HAL_UART_ISR=2 -D HAL_LCD=FALSE -lC
@@ -775,8 +775,8 @@ halAssertHazardLights:
         LJMP      ?BANKED_LEAVE_XDATA
           CFI CFA_XSP16 add(XSP16, 22)
 ??halAssertHazardLights_17:
-        MOV       C,0x80.0
-        JC        ??halAssertHazardLights_7
+        MOV       C,0x80.1
+        JNC       ??halAssertHazardLights_7
         INC       R1
         MOV       A,#0xa
         XRL       A,R1
@@ -788,8 +788,8 @@ halAssertHazardLights:
         MOV       R0,#0x0
         MOV       R1,#0x0
 ??halAssertHazardLights_18:
-        MOV       C,0x80.0
-        JC        ??halAssertHazardLights_19
+        MOV       C,0x80.1
+        JNC       ??halAssertHazardLights_19
         MOV       R0,#0x0
         MOV       R1,#0x0
 ??halAssertHazardLights_19:
@@ -845,8 +845,8 @@ halAssertHazardLights:
         MOV       R1,#0x0
         MOV       R4,#0x0
 ??halAssertHazardLights_6:
-        MOV       C,0x80.0
-        JC        ??halAssertHazardLights_6
+        MOV       C,0x80.1
+        JNC       ??halAssertHazardLights_6
         SETB      0x90.0
         SETB      0x90.1
         SETB      0x90.4
@@ -860,8 +860,8 @@ halAssertHazardLights:
         MOV       R2,#0x0
         MOV       R3,#0x0
 ??halAssertHazardLights_23:
-        MOV       C,0x80.0
-        JC        ??halAssertHazardLights_24
+        MOV       C,0x80.1
+        JNC       ??halAssertHazardLights_24
         MOV       R2,#0x0
         MOV       R3,#0x0
 ??halAssertHazardLights_24:

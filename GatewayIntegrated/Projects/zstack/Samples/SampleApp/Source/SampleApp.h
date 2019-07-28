@@ -79,7 +79,7 @@ extern "C"
 #define SAMPLEAPP_CONFIGURE_WIFI_EVT          0x0010
 
 // Group ID for Flash Command
-#define SAMPLEAPP_FLASH_GROUP                 0x0002// 0x0001
+#define SAMPLEAPP_FLASH_GROUP                 0x0003
   
 // Flash Command Duration - in milliseconds
 #define SAMPLEAPP_FLASH_DURATION               1000
